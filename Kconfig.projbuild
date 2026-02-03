@@ -1,0 +1,14 @@
+menu "SDK Configuration"
+    choice DEVICE_TYPE
+        prompt "config device type"
+        default SWITCH_DEVICE
+        help
+            Select the device type, you can change the default selection.
+        config SWITCH_DEVICE
+            bool "switch"
+        config GCOOL_DEVICE
+            bool "gcool"
+        config PLUG_DEVICE
+            bool "plug"
+    endchoice
+endmenu
