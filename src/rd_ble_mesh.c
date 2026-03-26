@@ -27,7 +27,6 @@
 #include "esp_ble_mesh_lighting_model_api.h"
 #include "esp_ble_mesh_local_data_operation_api.h"
 #include "rd_ble_mesh.h"
-#include "sdk_def.h"
 
 
 #define TAG "EXAMPLE_MESH"
