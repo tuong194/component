@@ -40,6 +40,7 @@ esp_err_t button_gpio_config(void);
  * @param event_handler: callback event handling
  */
 void btn_event_init(esp_event_handler_t event_handler);
+void button_manager_init(void);
 
 #endif /*  */
 

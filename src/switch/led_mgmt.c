@@ -35,7 +35,7 @@ void led_mgmt_init(void)
         led_obj[i].state = OFF_STATE;
     }
 #if NUM_ELEMENT == 1
-    led_obj[0].element = LED_WIFI
+    led_obj[0].element = LED_WIFI;
     led_obj[1].element = LED_1; led_obj[2].element = LED_1;
     led_obj[3].element = LED_1; led_obj[4].element = LED_1;
     led_obj[MAX_NUM_LED_OBJECT - 1].element = LED_WIFI; // led wifi
@@ -115,9 +115,9 @@ esp_err_t led_mgmt_set_state(uint8_t element, uint8_t state)
     }
     else
     {
-        led_t *led = get_led_object(element);
-        if (led == NULL)
-            return ESP_FAIL;
+        // led_t *led = get_led_object(element);
+        // if (led == NULL)
+        //     return ESP_FAIL;
 
         for (size_t i = 0; i < MAX_NUM_LED_OBJECT; i++)
         {
@@ -143,9 +143,9 @@ esp_err_t led_mgmt_set_dim(uint8_t element, uint8_t onoff, uint8_t dim_value)
     }
     else
     {
-        led_t *led = get_led_object(element);
-        if (led == NULL)
-            return ESP_FAIL;
+        // led_t *led = get_led_object(element);
+        // if (led == NULL)
+        //     return ESP_FAIL;
         for (size_t i = 0; i < MAX_NUM_LED_OBJECT; i++)
         {
             if (led_obj[i].element == element)
@@ -170,9 +170,9 @@ esp_err_t led_mgmt_set_color(uint8_t element, uint8_t onoff, uint8_t red, uint8_
     }
     else
     {
-        led_t *led = get_led_object(element);
-        if (led == NULL)
-            return ESP_FAIL;
+        // led_t *led = get_led_object(element);
+        // if (led == NULL)
+        //     return ESP_FAIL;
         for (size_t i = 0; i < MAX_NUM_LED_OBJECT; i++)
         {
             if (led_obj[i].element == element)
@@ -274,17 +274,28 @@ esp_err_t led_mgmt_reload_data(uint8_t element)
     return lc8823_send_frame_buffer();
 }
 
+esp_err_t led_mgmt_load_value(uint8_t ele, uint8_t onoff, uint8_t dim_value, uint8_t red, uint8_t green, uint8_t blue){
+    for (size_t i = 0; i < MAX_NUM_LED_OBJECT; i++)
+    {
+        if (led_obj[i].element == ele)
+            lc8823_load_value(&led_obj[i], onoff, dim_value, red, green, blue);
+    }
+    return ESP_OK;    
+}
+
 #if 1
 void led_mgmt_blink_delay(uint8_t ele, uint8_t num_cycle, uint16_t time_delay_ms)
 {
 
     while (num_cycle > 0)
     {
+
         if (num_cycle == 1)
         {
             led_mgmt_reload_data(ele);
             return;
         }
+        
         if (num_cycle > 1)
         {
             if (num_cycle % 2 == 0)
@@ -296,6 +307,7 @@ void led_mgmt_blink_delay(uint8_t ele, uint8_t num_cycle, uint16_t time_delay_ms
                 led_mgmt_set_state(ele, OFF_STATE);
             }
         }
+
         num_cycle--;
         SLEEP_US(time_delay_ms * 1000);
     }
@@ -347,4 +359,78 @@ void led_mgmt_scan_blink(void)
             }
         }
     }
+}
+
+#include "math.h"
+int led_mgmt_convert_hsv_to_rgb(uint8_t ele, double H, double S, double V){
+    double r, g, b;
+    uint8_t Red,Green,Blue;
+
+    H = H/10;
+    S = S/10;
+    V = V/10;
+    // Clamp inputs
+    if (S < 0) S = 0; 
+    if (S > 100) S = 100;
+    if (V < 0) V = 0; 
+    if (V > 100) V = 100;
+
+    // Normalize H to [0, 360)
+    H = fmod(H, 360.0);
+    if (H < 0.0) H += 360.0;
+
+    S /= 100.0;
+    V /= 100.0;
+
+    int i = (int)(H / 60.0);
+    double f = (H / 60.0) - i;
+    double p = V * (1 - S);
+    double q = V * (1 - S * f);
+    double t = V * (1 - S * (1 - f));
+
+    switch (i) {
+        case 0: r = V; g = t; b = p; break;
+        case 1: r = q; g = V; b = p; break;
+        case 2: r = p; g = V; b = t; break;
+        case 3: r = p; g = q; b = V; break;
+        case 4: r = t; g = p; b = V; break;
+        case 5: r = V; g = p; b = q; break;
+        default: r = g = b = 0; break;
+    }
+
+    Red = (uint8_t)(r * 255.0 + 0.5);
+    Green = (uint8_t)(g * 255.0 + 0.5);
+    Blue = (uint8_t)(b * 255.0 + 0.5);
+
+    printf("[LC8823] index: #%d R: %d G: %d B: %d\n",ele, Red, Green, Blue);
+    // led_mgmt_set_color(ele, ON_STATE, Red, Green, Blue); //ON
+    // led_mgmt_set_color(ele, OFF_STATE, Red, Green, Blue); //OFF
+    if (ele == ALL_ELE)
+    {
+        for (size_t i = 0; i < MAX_NUM_LED_OBJECT; i++)
+        {
+            if (led_obj[i].element != LED_WIFI)
+            {
+                lc8823_load_value(&led_obj[i], ON_STATE, LIGHT_MAX, Red, Green, Blue);
+                lc8823_load_value(&led_obj[i], OFF_STATE, LIGHT_MIN, Red, Green, Blue);
+                // lc8823_set_color(&led_obj[i], ON_STATE, Red, Green, Blue);
+                // lc8823_set_color(&led_obj[i], OFF_STATE, Red, Green, Blue);
+            }
+        }
+    }
+    else
+    {
+        for (size_t i = 0; i < MAX_NUM_LED_OBJECT; i++)
+        {
+            if (led_obj[i].element == ele){
+                lc8823_load_value(&led_obj[i], ON_STATE, LIGHT_MAX, Red, Green, Blue);
+                lc8823_load_value(&led_obj[i], OFF_STATE, LIGHT_MIN, Red, Green, Blue);
+                // lc8823_set_color(&led_obj[i], ON_STATE, Red, Green, Blue);
+                // lc8823_set_color(&led_obj[i], OFF_STATE, Red, Green, Blue);
+            }
+        }
+    }
+
+    led_mgmt_reload_data(ele);
+    return 0;
 }

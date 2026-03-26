@@ -42,7 +42,7 @@ esp_err_t lc8823_init_frame_buffer(const uint8_t num_led);
 esp_err_t lc8823_update_frame_buffer(uint8_t idx, led_data_t *led_data);
 esp_err_t lc8823_send_frame_buffer(void);
 
-void lc8823_load_value(led_t *led, uint8_t onoff, uint8_t dim_value, uint8_t red, uint8_t green, uint8_t blue);
+void      lc8823_load_value(led_t *led, uint8_t onoff, uint8_t dim_value, uint8_t red, uint8_t green, uint8_t blue);
 esp_err_t lc8823_set_state(led_t *led, uint8_t state);
 esp_err_t lc8823_set_color(led_t *led, uint8_t onoff, uint8_t red, uint8_t green, uint8_t blue);
 esp_err_t lc8823_set_dim(led_t *led, uint8_t onoff, uint8_t dim_value);

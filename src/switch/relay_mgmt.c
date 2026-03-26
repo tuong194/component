@@ -22,9 +22,9 @@ relay_t relay[RELAY_NUM] = {
     {
         .element = ELE_1,
         .gpio = {
-            RELAY1_PIN, ACTIVE_HIGH, OFF_STATE
+            RELAY1_PIN, ACTIVE_HIGH, STATE_INIT
         },
-        .state = false,
+        .state = STATE_INIT,
         #if DETECT_ZERO
         .is_control = false
         #endif
@@ -34,9 +34,9 @@ relay_t relay[RELAY_NUM] = {
     ,{
         .element = ELE_2,
         .gpio = {
-            RELAY2_PIN, ACTIVE_HIGH, OFF_STATE
+            RELAY2_PIN, ACTIVE_HIGH, STATE_INIT
         },
-        .state = false,
+        .state = STATE_INIT,
         #if DETECT_ZERO
         .is_control = false
         #endif
@@ -46,9 +46,9 @@ relay_t relay[RELAY_NUM] = {
     ,{
         .element = ELE_3,
         .gpio = {
-            RELAY3_PIN, ACTIVE_HIGH, OFF_STATE
+            RELAY3_PIN, ACTIVE_HIGH, STATE_INIT
         },
-        .state = false,
+        .state = STATE_INIT,
         #if DETECT_ZERO
         .is_control = false
         #endif
@@ -58,9 +58,9 @@ relay_t relay[RELAY_NUM] = {
     ,{
         .element = ELE_4,
         .gpio = {
-            RELAY4_PIN, ACTIVE_HIGH, OFF_STATE
+            RELAY4_PIN, ACTIVE_HIGH, STATE_INIT
         },
-        .state = false,
+        .state = STATE_INIT,
         #if DETECT_ZERO
         .is_control = false
         #endif

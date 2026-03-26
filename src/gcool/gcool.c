@@ -10,7 +10,7 @@
 #define GCOOL_TX_PIN_DEFAULT  GPIO_NUM_21 //UART_PIN_NO_CHANGE 
 #define GCOOL_RX_PIN_DEFAULT  GPIO_NUM_20 //UART_PIN_NO_CHANGE 
 
-#define GCOOL_BAUD_DEFAULT                115200
+#define GCOOL_BAUD_DEFAULT                9600
 #define GCOOL_TXRX_BUF_SIZE_DEFAULT       256
 
 #define HEADER1 0x55
@@ -18,7 +18,7 @@
 
 #define MAX_DATA_BUFF_RX    128
 
-#define TIME_OUT_PING       15*1000*1000 // 15s
+#define TIME_OUT_PING       30*1000*1000 // 15s
 #define TIME_OUT_PING_FAIL  1000*1000 // 1000ms
 
 typedef enum {
@@ -54,6 +54,8 @@ static check_data_rec check_data;
 static gcool_packet_t* data_receive;
 static bool flag_check_heartbreak = false;
 static uint8_t status_wifi = AP_MODE;
+static uint8_t pos_start_frame = 0;
+static bool is_ping_heartbeat = true;
 
 
 static void gcool_process_data(uint8_t len);
@@ -84,6 +86,14 @@ static rd_uart_config_t gcool_uart_config = {
     .process_data = gcool_process_data,
     .reset_state = gcool_reset_check_data
 };
+
+static inline void gcool_set_pos_start_frame(uint8_t pos){
+    pos_start_frame = pos;
+}
+
+static inline uint8_t gcool_get_pos_start_frame(void){
+    return pos_start_frame;
+}
 
 uint8_t check_sum(uint8_t* data, uint8_t leng)
 {
@@ -163,23 +173,25 @@ static void gcool_process_data(uint8_t len) {
             continue;
         }
 
+        gcool_set_pos_start_frame(count_check);
         ret = gcool_check_sum(data_receive, data_buff, count_check);
-        if (ret == ESP_OK) check_data.state = HANDLE_DATA;
+        if (ret == ESP_OK){
+            check_data.state = HANDLE_DATA;
+            return;
+        } 
         else check_data.state = CHECK_DATA;
-
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
 
 static void gcool_reset_check_data(void) {
     check_data.state = CHECK_DATA;
-    // check_data.count_packet = 0;
     memset(data_buff, 0, MAX_DATA_BUFF_RX);
 }
 
 esp_err_t gcool_check_header(const gcool_packet_t* data_rec) {
     if (data_rec->header[0] == HEADER1 && data_rec->header[1] == HEADER2) {
-        ESP_LOGE(GCOOL_TAG, "check header done");
+        // ESP_LOGI(GCOOL_TAG, "check header done");
         return ESP_OK;
     }
     return ESP_FAIL;
@@ -190,7 +202,7 @@ esp_err_t gcool_check_sum(const gcool_packet_t* data_rec, uint8_t* buff, uint8_t
     uint8_t checksum = buff[pos + leng_data + 6];
     if (check_sum(&buff[pos], leng_data + 6) == checksum)
     {
-        ESP_LOGI(GCOOL_TAG, "Checksum is valid");
+        // ESP_LOGI(GCOOL_TAG, "Checksum is valid");
         return ESP_OK;
     }
     ESP_LOGE(GCOOL_TAG, "Checksum failed");
@@ -198,10 +210,10 @@ esp_err_t gcool_check_sum(const gcool_packet_t* data_rec, uint8_t* buff, uint8_t
 }
 
 int gcool_handle_data(void) {
+    esp_err_t ret = ESP_OK;
     if (check_data.state == HANDLE_DATA) {
-        esp_err_t ret = ESP_OK;
         uint16_t leng_data = (data_receive->length[0] << 8) | data_receive->length[1];
-        ESP_LOGI(GCOOL_TAG, "Processing data...");
+        //ESP_LOGI(GCOOL_TAG, "Processing data...");
 
         switch (data_receive->command_word)
         {
@@ -221,6 +233,7 @@ int gcool_handle_data(void) {
             ESP_LOGI(GCOOL_TAG, "CMD wifi status");
             break;
         case CMD_NETWORK_CONFIG_MODE:
+            ESP_LOGI(GCOOL_TAG, "CMD_NETWORK_CONFIG_MODE");
             ret = gcool_init_basic_cmd(VERSION_MODULE, CMD_NETWORK_CONFIG_MODE, 0, NULL);
             break;
         case CMD_WORKING_STT_MCU:
@@ -228,6 +241,7 @@ int gcool_handle_data(void) {
             ret = mcu_rsp_working_stt_handle(data_receive->data, leng_data);
             break;
         case CMD_GET_STT_WIFI:
+            //ESP_LOGI(GCOOL_TAG, "CMD get stt wifi");
             ret = handle_CMD_GET_STT_WIFI(data_receive->data, leng_data);
             break;
         default:
@@ -235,9 +249,21 @@ int gcool_handle_data(void) {
             break;
         }
 
-        gcool_reset_check_data();
+        // gcool_reset_check_data();
+        uint8_t pos_start_frame_current = gcool_get_pos_start_frame();
+        uint8_t pos_start_frame_next = pos_start_frame_current + 7 + leng_data; 
+
+        if(data_buff[pos_start_frame_next] == HEADER1 && data_buff[pos_start_frame_next+1] == HEADER2){
+            is_ping_heartbeat = false;
+            data_receive = (gcool_packet_t *)&data_buff[pos_start_frame_next];
+            gcool_set_pos_start_frame(pos_start_frame_next);
+            return gcool_handle_data();
+        }else{
+            is_ping_heartbeat = true;
+            gcool_reset_check_data();
+        }
     }
-    return 0;
+    return ret;
 }
 
 static void gcool_handle_task_cb(void* arg) {
@@ -295,8 +321,8 @@ static esp_err_t handle_CMD_WORKING_MODE(uint8_t* data, uint8_t length)
     if (length > 0)
     {
         ESP_LOGI(GCOOL_TAG, "processing by the module: %02x, %02x", data[0], data[1]);
-        uint8_t stt_led_wifi = data[0];
-        uint8_t stt_btn_reset_wifi = data[1];
+        // uint8_t stt_led_wifi = data[0];
+        // uint8_t stt_btn_reset_wifi = data[1];
         //TODO
     }
     report_wifi_stt(status_wifi);
@@ -352,6 +378,7 @@ esp_err_t report_wifi_stt(uint8_t stt)
 
 void loop_hertbreak_detect(void)
 {
+    if(!is_ping_heartbeat) return;
     static int64_t last_heartbreak_time = 0;
     if (!flag_check_heartbreak)
     {

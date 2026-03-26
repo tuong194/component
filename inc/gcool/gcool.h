@@ -21,9 +21,9 @@ esp_err_t gcool_func_colour_data(uint8_t* data, uint8_t length);
 esp_err_t gcool_func_dreamlight_scene(uint8_t* data, uint8_t length);
 
 uint8_t gcool_get_status_wifi(void);
-void gcool_set_status_wifi(uint8_t stt);
-void gcool_init(const gpio_num_t tx_pin, const gpio_num_t rx_pin, const uart_port_t port_num);
-void gcool_register_func_rsp_cloud(dev_rsp_cloud cb);
+void    gcool_set_status_wifi(uint8_t stt);
+void    gcool_init(const gpio_num_t tx_pin, const gpio_num_t rx_pin, const uart_port_t port_num);
+void    gcool_register_func_rsp_cloud(dev_rsp_cloud cb);
 
 
 #endif

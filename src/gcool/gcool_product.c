@@ -156,7 +156,7 @@ esp_err_t Handle_Product_Function(uint8_t* data)
     case DREAMLIGHT_SCENE:
         break;
     default:
-        ESP_LOGE(GCOOL_TAG, "Unknown DP ID");
+        ESP_LOGE(GCOOL_TAG, "Unknown DP ID: 0x%02x", DP_ID);
         err = ESP_FAIL;
         break;
     }

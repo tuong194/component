@@ -20,7 +20,8 @@ typedef struct{
 ESP_EVENT_DEFINE_BASE(BUTTON_EVENT_BASE);
 
 static esp_event_loop_handle_t btn_event_loop;
-static int64_t time_out_get_tick = 0;
+static int64_t time_out_get_tick = 0; // time out kick out
+static int64_t time_out_pair_k9b = 0; // time out pair k9b
 static uint8_t btn_index_pair = 0xff;
 
 static button_handle_t btn_handler[BTN_NUM];
@@ -162,21 +163,24 @@ static void board_button_event_cb(void *arg, void *data){
     switch (event)
     {
     case BUTTON_EVENT_PRESS:
-        esp_event_post_to(btn_event_loop, BUTTON_EVENT_BASE, EVENT_BUTTON_PRESS, &btn->element, 1, portMAX_DELAY);
         if(btn_index_pair == btn->element){
             esp_event_post_to(btn_event_loop, BUTTON_EVENT_BASE, EVENT_BUTTON_DELETE_ALL_K9B, &btn->element, 1, portMAX_DELAY);
             btn_index_pair = 0xff;
+            break;
         }
+        esp_event_post_to(btn_event_loop, BUTTON_EVENT_BASE, EVENT_BUTTON_PRESS, &btn->element, 1, portMAX_DELAY);
         break;
     case BUTTON_EVENT_KEEPING:{
         btn->is_keeping = 1;
         get_tick_time(&time_out_get_tick);
+        get_tick_time(&time_out_pair_k9b);
         break;
     }
     case BUTTON_EVENT_RELEASE_KEEPING:{
-        printf("[BOARD] btn %d release keeping\n",btn->element + 1);
+        // printf("[BOARD] btn %d release keeping\n",btn->element + 1);
         btn->is_keeping = 0;
         get_tick_time(&time_out_get_tick);
+        get_tick_time(&time_out_pair_k9b);
         break;
     }
     case BUTTON_EVENT_LONG_KEEPING:{
@@ -195,7 +199,7 @@ static void board_button_event_cb(void *arg, void *data){
     }
     case BUTTON_EVENT_RELEASE_LONG_KEEPING:
         btn->is_long_keeping = 0;
-        printf("[BOARD] btn %d release long keeping\n",btn->element + 1);
+        // printf("[BOARD] btn %d release long keeping\n",btn->element + 1);
         break;
     
     default:
@@ -203,6 +207,7 @@ static void board_button_event_cb(void *arg, void *data){
     }
 }
 
+extern void K9B_Pair_OnOff_ClearFlag(void);
 static void button_manager_cb(void *args){
     static uint8_t count_kick_out = 0;
 #if BTN_NUM == 1
@@ -250,7 +255,14 @@ static void button_manager_cb(void *args){
     {
         count_kick_out = 0;
         ESP_LOGW("BTN_MANAGER", "time out kick out, reset count");
-    }      
+    }  
+    
+    if (btn_index_pair != 0xff && rd_exceed_us(time_out_pair_k9b, CLOCK_TIME_OUT_KICK_OUT))
+    {
+        btn_index_pair = 0xff;
+        ESP_LOGW("BTN_MANAGER", "time out pair k9b, reset btn_index_pair");
+        K9B_Pair_OnOff_ClearFlag();
+    }  
 }
 
 void button_manager_init(void)
@@ -286,10 +298,10 @@ void btn_event_init(esp_event_handler_t event_handler){
     ESP_ERROR_CHECK(esp_event_loop_create(&loop_args, &btn_event_loop));
     if(!event_handler){
         event_handler = dummy_btn_handler;
-    }else{
-        esp_event_handler_register_with(btn_event_loop, BUTTON_EVENT_BASE, ESP_EVENT_ANY_ID, event_handler, NULL);
     }
-    button_manager_init();
+    esp_event_handler_register_with(btn_event_loop, BUTTON_EVENT_BASE, ESP_EVENT_ANY_ID, event_handler, NULL);
+    
+    // button_manager_init();
 }
 
 

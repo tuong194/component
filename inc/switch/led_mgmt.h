@@ -64,4 +64,16 @@ void led_mgmt_blink_delay(uint8_t ele, uint8_t num_cycle, uint16_t time_delay_ms
 void led_mgmt_set_blink(uint8_t ele, uint8_t num_cycle, uint32_t time_tongle_ms);
 void led_mgmt_scan_blink(void);
 
+/**
+ * @brief convert HSV to RGB
+ * 
+ * @param ele index of element (0,1,2,3) or ALL_ELE 
+ * @param H range 0-3600
+ * @param S range 0-1000
+ * @param V range 0-1000
+ * @return int 
+ */
+/*!< https://colorizer.org/ */
+int led_mgmt_convert_hsv_to_rgb(uint8_t ele, double H, double S, double V);
+
 #endif /* */
