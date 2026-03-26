@@ -1,0 +1,1 @@
+Cmake root add: list(APPEND SDKCONFIG_DEFAULTS "sdkconfig.mesh_defaults")
