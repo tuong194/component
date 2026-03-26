@@ -7,7 +7,7 @@
 
 #define OFF_STATE    0
 #define ON_STATE     1
-
+#define STATE_INIT   0xff
 
 #if DETECT_ZERO
 #define DETECT_ZERO_PIN  6 
